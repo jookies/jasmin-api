@@ -49,6 +49,8 @@ coverage.xml
 
 # Django stuff:
 *.log
+jasmin_api/db.sqlite3
+jasmin_api/jasmin_api/local_settings.py
 
 # Sphinx documentation
 docs/_build/
