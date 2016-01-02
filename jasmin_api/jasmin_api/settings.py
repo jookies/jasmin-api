@@ -13,6 +13,12 @@ REST_FRAMEWORK = {
     )
 }
 
+#Jasmin telnet defaults, override in local_settings.py
+TELNET_HOST = '127.0.0.1'
+TELNET_PORT = 8990
+TELNET_USERNAME = 'jcliadmin'
+TELNET_PW = 'jclipwd'  # no alternative storing as plain text
+
 #This should be OK for REST API - we are not generating URLs
 #see https://www.djangoproject.com/weblog/2013/feb/19/security/#s-issue-host-header-poisoning
 ALLOWED_HOSTS = ['*']
@@ -41,6 +47,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'rest_api.middleware.TelnetConnectionMiddleware'
 )
 
 ROOT_URLCONF = 'jasmin_api.urls'

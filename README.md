@@ -11,6 +11,13 @@ Requires local_settings.py in jasmin_api/jasmin_api
 
 By default a SQLite database will be used. You can use a different database by adding a [DATABASES setting](https://docs.djangoproject.com/en/1.8/ref/settings/#databases) to local_settings.py
 
+You can also override the default settings for the telnet connection in local_settings.py. These settings with their defaults are:
+
+TELNET_HOST = '127.0.0.1'
+TELNET_PORT = 8990
+TELNET_USERNAME = 'jcliadmin'
+TELNET_PW = 'jclipwd'
+
 ##Installing
 
 We recommend installing in a virtualenv
