@@ -1,5 +1,4 @@
-import telnetlib
-from socket import error as socket_error
+import pexpect
 
 from django.conf import settings
 from django.http import JsonResponse
@@ -23,25 +22,27 @@ class TelnetConnectionMiddleware(object):
         if not request.path.startswith('/api/'):
             return None
         try:
-            telnet = telnetlib.Telnet(
-                settings.TELNET_HOST,
-                settings.TELNET_PORT,
-                 timeout = 1
-            )
-        except socket_error:
-            return error_response('Could not connect to Jasmin')
-        try:
-            telnet.read_until('Username: ')
-            telnet.write(settings.TELNET_USERNAME + '\n')
-            telnet.read_until('Password: ')
-            telnet.write(settings.TELNET_PW + '\n')
-        except (EOFError, socket_error):
+            telnet = pexpect.spawn("telnet %s %s" %
+                (settings.TELNET_HOST, settings.TELNET_PORT))
+            telnet.expect_exact('Username: ')
+            telnet.sendline(settings.TELNET_USERNAME)
+            telnet.expect_exact('Password: ')
+            telnet.sendline(settings.TELNET_PW)
+        except pexpect.EOF:
             return error_response('Unexpected response from Jasmin')
+        except pexpect.TIMEOUT:
+            return error_response('Connection to Jasmin timed out')
+        try:
+            telnet.expect_exact(settings.STANDARD_PROMPT)
+        except pexpect.EOF:
+            return error_response('Jasmin login failed')
         request.telnet = telnet
-        print 'ADDED'
         return None
 
     def process_response(self, request, response):
         if hasattr(request, 'telnet'):
-            request.telnet.close()
+            try:
+                request.telnet.sendline('quit')
+            except pexpect.ExceptionPexpect:
+                request.telnet.kill(9)
         return response

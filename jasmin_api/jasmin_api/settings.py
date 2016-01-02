@@ -19,6 +19,9 @@ TELNET_PORT = 8990
 TELNET_USERNAME = 'jcliadmin'
 TELNET_PW = 'jclipwd'  # no alternative storing as plain text
 
+#There should be no need to change this
+STANDARD_PROMPT = 'jcli : '
+
 #This should be OK for REST API - we are not generating URLs
 #see https://www.djangoproject.com/weblog/2013/feb/19/security/#s-issue-host-header-poisoning
 ALLOWED_HOSTS = ['*']
