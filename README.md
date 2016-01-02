@@ -36,6 +36,8 @@ To run on production
 
 which uses the production quality CherryPy WSGI server. Django's "manage.py runserver" will work but should be used only for testing, troubleshooting and development.
 
-## Dependencies
-See requirements.txt
-optional libyaml would improve performance of Django REST Swagger
+## Dependencies and requirements
+* Python 2.7 required, use of virtualenv recommended
+* A command line telnet client should be installed - this is a usual with Unix type OSes
+* See requirements.txt for packages installable from pypi
+* Optional: libyaml would improve performance of Django REST Swagger
