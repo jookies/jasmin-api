@@ -4,6 +4,17 @@ SETTINGS_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+################################################################################
+#         Settings most likely to need overriding in local_settings.py         #
+################################################################################
+
+#Jasmin telnet defaults, override in local_settings.py
+TELNET_HOST = '127.0.0.1'
+TELNET_PORT = 8990
+TELNET_USERNAME = 'jcliadmin'
+TELNET_PW = 'jclipwd'  # no alternative storing as plain text
+
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.BasicAuthentication',
@@ -13,18 +24,28 @@ REST_FRAMEWORK = {
     )
 }
 
-#Jasmin telnet defaults, override in local_settings.py
-TELNET_HOST = '127.0.0.1'
-TELNET_PORT = 8990
-TELNET_USERNAME = 'jcliadmin'
-TELNET_PW = 'jclipwd'  # no alternative storing as plain text
+################################################################################
+#                            Other settings                                    #
+################################################################################
 
-#There should be no need to change this
-STANDARD_PROMPT = 'jcli : '
+
+STANDARD_PROMPT = 'jcli : ' #There should be no need to change this
 
 #This should be OK for REST API - we are not generating URLs
 #see https://www.djangoproject.com/weblog/2013/feb/19/security/#s-issue-host-header-poisoning
 ALLOWED_HOSTS = ['*']
+
+WAGGER_SETTINGS = {
+    'exclude_namespaces': [],
+    'api_version': '',
+    'api_path': '/api/',
+    'is_authenticated': True,
+    'is_superuser': False,
+    'info': {
+        'description': 'A REST API for managing the Jasmin SMS Gateway',
+        'title': 'Jasim Management REST API',
+    },
+}
 
 
 # Application definition

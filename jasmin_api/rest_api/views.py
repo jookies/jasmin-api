@@ -16,8 +16,11 @@ class TestView(APIView):
 
 
 class GroupViewSet(ViewSet):
-    """ViewSet for managing *Jasmin* Groups (*not* Django auth groups)"""
+    """ViewSet for managing *Jasmin* user groups (*not* Django auth groups)"""
     def list(self, request):
+        """
+        List groups. No request parameters provided or required.
+        """
         telnet = request.telnet
         telnet.sendline('group -l')
         telnet.expect([r'(.+)\n' + STANDARD_PROMPT])

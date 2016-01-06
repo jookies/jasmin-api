@@ -11,5 +11,6 @@ router.register(r'groups', views.GroupViewSet, base_name='groups')
 urlpatterns = [
     url(r'^$', views.TestView.as_view()),
     url(r'^api/', include(router.urls)),
+    url(r'^docs/', include('rest_framework_swagger.urls')),
 ]
 
