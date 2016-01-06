@@ -1,6 +1,7 @@
 import pexpect
 
 from django.conf import settings
+from django.http import HttpResponseBadRequest
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,6 +9,7 @@ from rest_framework.viewsets import ViewSet
 
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
+INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
 
 
 class TestView(APIView):
@@ -25,11 +27,9 @@ class GroupViewSet(ViewSet):
         telnet.sendline('group -l')
         telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
         result = telnet.match.group(0).strip().replace("\r", '').split("\n")
-        print result
         if len(result) < 3:
             return Response({'groups': []})
         groups = result[2:-2]
-        print groups
         return Response(
             {
                 'groups':
@@ -42,3 +42,40 @@ class GroupViewSet(ViewSet):
                     ]
             }
         )
+
+    def create(self, request):
+        """Create a group.
+        One POST parameter required, the group identified (a string)
+        ---
+        # YAML
+        omit_serializer: true
+        parameters:
+        - name: gid
+          description: Group identifier
+          required: true
+          type: string
+          paramType: form
+        """
+        telnet = request.telnet
+        telnet.sendline('group -a')
+        telnet.expect(r'Adding a new Group(.+)\n' + INTERACTIVE_PROMPT)
+        if not 'gid' in request.POST:
+            return HttpResponseBadRequest('Missing gid (group identifier)')
+        telnet.sendline('gid ' + request.POST['gid'] + '\n')
+        telnet.expect(INTERACTIVE_PROMPT)
+        telnet.sendline('ok\n')
+        matched_index = telnet.expect([
+            r'.+Successfully added(.+)\[(.+)\][\n\r]+' + STANDARD_PROMPT,
+            r'.+Error: (.+)[\n\r]+' + INTERACTIVE_PROMPT,
+            r'.+(.*)(' + INTERACTIVE_PROMPT + '|' + STANDARD_PROMPT + ')',
+        ])
+        if matched_index == 0:
+            gid = telnet.match.group(2).strip()
+            telnet.sendline('persist\n')
+            return Response(
+                {
+                    'name': gid
+                }
+            )
+        else:
+            return HttpResponseBadRequest(telnet.match.group(1))

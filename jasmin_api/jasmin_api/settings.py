@@ -29,7 +29,8 @@ REST_FRAMEWORK = {
 ################################################################################
 
 
-STANDARD_PROMPT = 'jcli : ' #There should be no need to change this
+STANDARD_PROMPT = 'jcli : '  # There should be no need to change this
+INTERACTIVE_PROMPT ='> '  # Prompt for interactive commands
 
 #This should be OK for REST API - we are not generating URLs
 #see https://www.djangoproject.com/weblog/2013/feb/19/security/#s-issue-host-header-poisoning
