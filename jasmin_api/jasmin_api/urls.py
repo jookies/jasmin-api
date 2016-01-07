@@ -7,6 +7,7 @@ from rest_api import views
 
 router = DefaultRouter()
 router.register(r'groups', views.GroupViewSet, base_name='groups')
+router.register(r'users', views.UserViewSet, base_name='users')
 
 urlpatterns = [
     url(r'^$', views.TestView.as_view()),

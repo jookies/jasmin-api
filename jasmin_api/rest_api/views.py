@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import detail_route, list_route
+from rest_framework.exceptions import NotFound, APIException
 
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
@@ -18,10 +19,48 @@ class TestView(APIView):
         return Response({'result': 'ok'})
 
 
+class CanNotModifyError(APIException):
+    status_code = 400
+    default_detail = 'Can not modify a key'
+
+class JasminSyntaxError(APIException):
+    status_code = 400
+    default_detail = 'Can not modify a key'
+
+class UnknownError(APIException):
+    status_code = 404
+    default_detail = 'object not known'
+
+
+def set_ikeys(telnet, keys2vals):
+    """set multiple keys for interactive command"""
+    for key, val in keys2vals.items():
+        telnet.sendline("%s %s" % (key, val))
+        matched_index = telnet.expect([
+            r'.*(Unknown .*)' + INTERACTIVE_PROMPT,
+            r'(.*) can not be modified.*' + INTERACTIVE_PROMPT,
+            r'(.*)' + INTERACTIVE_PROMPT
+        ])
+        result = telnet.match.group(1).strip()
+        print matched_index, result
+        if matched_index == 0:
+            raise UnknownError(detail=result)
+        if matched_index == 1:
+            raise CanNotModifyError(detail=result)
+    print 'sending ok'
+    telnet.sendline('ok')
+    ok_index = telnet.expect([
+        r'ok(.* syntax is invalid).*' + INTERACTIVE_PROMPT,
+        r'.*' + STANDARD_PROMPT,
+    ])
+    if ok_index == 0:
+        #remove whitespace and return error
+        raise JasminSyntaxError(" ".join(telnet.match.group(1).split()))
+    return
+
+
 class GroupViewSet(ViewSet):
-    """ViewSet for managing *Jasmin* user groups (*not* Django auth groups)
-            One POST parameter required, the group identifier (a string)
-    """
+    """ViewSet for managing *Jasmin* user groups (*not* Django auth groups)"""
     lookup_field = 'gid'
 
     def list(self, request):
@@ -41,7 +80,7 @@ class GroupViewSet(ViewSet):
                     [
                         {
                             'name': g.strip().lstrip('!#'), 'status': (
-                                'disabled' if g[1] == '!' else 'active'
+                                'disabled' if g[1] == '!' else 'enabled'
                             )
                         } for g in groups
                     ]
@@ -133,3 +172,125 @@ class GroupViewSet(ViewSet):
         - 400: other error
         """
         return self.simple_group_action(request.telnet, 'd', gid)
+
+
+class UserViewSet(ViewSet):
+    """ViewSet for managing *Jasmin* users (*not* Django auth users)"""
+    lookup_field = 'uid'
+
+    def get_user(self, telnet, uid, silent=False):
+        """gets a single users data
+        silent supresses Http404 exception if user not found"""
+        telnet.sendline('user -s ' + uid)
+        matched_index = telnet.expect([
+                r'.+Unknown User:.*' + STANDARD_PROMPT,
+                r'.+Usage: user.*' + STANDARD_PROMPT,
+                r'(.+)\n' + STANDARD_PROMPT,
+        ])
+        print matched_index
+        print telnet.match.group(0)
+        if matched_index != 2:
+            if silent:
+                return
+            else:
+                raise Http404()
+        result = telnet.match.group(1)
+        user = {}
+        for line in [l for l in result.splitlines() if l][1:]:
+            d = [x for x in line.split() if x]
+            if len(d) == 2:
+                user[d[0]] = d[1]
+            elif len(d) == 4:
+                #Not DRY, could be more elegant
+                if not d[0] in user:
+                    user[d[0]] = {}
+                if not d[1] in user[d[0]]:
+                    user[d[0]][d[1]] = {}
+                if not d[2] in user[d[0]][d[1]]:
+                    user[d[0]][d[1]][d[2]] = {}
+                user[d[0]][d[1]][d[2]] = d[3]
+            #each line has two or four lines so above exhaustive
+        return user
+
+    def retrieve(self, request, uid):
+        return Response({'user': self.get_user(request.telnet, uid)})
+
+    def list(self, request):
+        """List users. No parameters"""
+        telnet = request.telnet
+        telnet.sendline('user -l')
+        telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
+        result = telnet.match.group(0).strip()
+        if len(result) < 3:
+            return Response({'users': []})
+        #user_text = result[2:-2]
+        results = [l for l in result.splitlines() if l]
+        annotated_uids = [u.split(None, 1)[0][1:] for u in results[2:-2]]
+        print annotated_uids
+        users = []
+        for auid in annotated_uids:
+            if auid[0] == '!':
+                udata = self.get_user(telnet, auid[1:], True)
+                udata['status'] = 'disabled'
+            else:
+                udata = self.get_user(telnet, auid, True)
+                udata['status'] = 'enabled'
+            users.append(udata)
+        return Response(
+            {
+                #return users skipping None (== nonexistent user)
+                'users': [u for u in users if u]
+            }
+        )
+
+    def create(self, request):
+        """Create a User.
+        Required parameters: username, password, uid (user identifier), gid (group identifier), 
+        ---
+        # YAML
+        omit_serializer: true
+        parameters:
+        - name: uid
+          description: Username identifier
+          required: true
+          type: string
+          paramType: form
+        - name: gid
+          description: Group identifier
+          required: true
+          type: string
+          paramType: form
+        - name: username
+          description: Username
+          required: true
+          type: string
+          paramType: form
+        - name: password
+          description: Password
+          required: true
+          type: string
+          paramType: form
+        """
+        telnet = request.telnet
+        post = request.POST
+        try:
+            uid, gid, username, password = \
+                post['uid'], post['gid'], post['username'], post['password']
+        except IndexError:
+            return HttpResponseBadRequest(
+                'Missing parameter: uid, gid, username and password required')
+        telnet.sendline('user -a')
+        telnet.expect(r'Adding a new User(.+)\n' + INTERACTIVE_PROMPT)
+        set_ikeys(
+            telnet,
+            {
+                'uid': uid, 'gid': gid, 'username': username,
+                'password': password
+            }
+        )
+        return Response({'user': self.get_user(telnet, uid)})
+
+        def partial_update(self, request, uid):
+            telnet = request.telnet
+            telnet.sendline('user -u ' + uid)
+            
