@@ -1,11 +1,12 @@
 import pexpect
 
 from django.conf import settings
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, Http404
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
+from rest_framework.decorators import detail_route, list_route
 
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
@@ -19,6 +20,8 @@ class TestView(APIView):
 
 class GroupViewSet(ViewSet):
     """ViewSet for managing *Jasmin* user groups (*not* Django auth groups)"""
+    lookup_field = 'gid'
+
     def list(self, request):
         """
         List groups. No request parameters provided or required.
@@ -45,7 +48,7 @@ class GroupViewSet(ViewSet):
 
     def create(self, request):
         """Create a group.
-        One POST parameter required, the group identified (a string)
+        One POST parameter required, the group identifier (a string)
         ---
         # YAML
         omit_serializer: true
@@ -72,10 +75,29 @@ class GroupViewSet(ViewSet):
         if matched_index == 0:
             gid = telnet.match.group(2).strip()
             telnet.sendline('persist\n')
-            return Response(
-                {
-                    'name': gid
-                }
-            )
+            return Response({'name': gid})
+        else:
+            return HttpResponseBadRequest(telnet.match.group(1))
+
+    def destroy(self, request, gid):
+        """Delete a group.
+        One POST parameter required, the group identifier (a string)
+        HTTP codes indicate result as follows
+        200: successful deletion
+        404: nonexistent group
+        400: other error
+        """
+        telnet = request.telnet
+        telnet.sendline('group -r ' + gid)
+        matched_index = telnet.expect([
+            r'.+Successfully removed Group id:(.+)' + STANDARD_PROMPT,
+            r'.+Unknown Group: (.+)' + STANDARD_PROMPT,
+            r'.+(.*)' + STANDARD_PROMPT,
+        ])
+        if matched_index == 0:
+            telnet.sendline('persist\n')
+            return Response ({'name': gid})
+        elif matched_index == 1:
+            raise Http404()
         else:
             return HttpResponseBadRequest(telnet.match.group(1))
