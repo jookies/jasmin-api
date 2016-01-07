@@ -79,18 +79,10 @@ class GroupViewSet(ViewSet):
         else:
             return HttpResponseBadRequest(telnet.match.group(1))
 
-    def destroy(self, request, gid):
-        """Delete a group.
-        One POST parameter required, the group identifier (a string)
-        HTTP codes indicate result as follows
-        200: successful deletion
-        404: nonexistent group
-        400: other error
-        """
-        telnet = request.telnet
-        telnet.sendline('group -r ' + gid)
+    def simple_group_action(self, telnet, action, gid):
+        telnet.sendline('group -%s %s' % (action, gid))
         matched_index = telnet.expect([
-            r'.+Successfully removed Group id:(.+)' + STANDARD_PROMPT,
+            r'.+Successfully(.+)' + STANDARD_PROMPT,
             r'.+Unknown Group: (.+)' + STANDARD_PROMPT,
             r'.+(.*)' + STANDARD_PROMPT,
         ])
@@ -102,6 +94,16 @@ class GroupViewSet(ViewSet):
         else:
             return HttpResponseBadRequest(telnet.match.group(1))
 
+    def destroy(self, request, gid):
+        """Delete a group.
+        One POST parameter required, the group identifier (a string)
+        HTTP codes indicate result as follows
+        200: successful deletion
+        404: nonexistent group
+        400: other error
+        """
+        return self.simple_group_action(request.telnet, 'r', gid)
+
     @detail_route(methods=['patch'])
     def enable(self, request, gid):
         """Enable a group.
@@ -111,17 +113,16 @@ class GroupViewSet(ViewSet):
         404: nonexistent group
         400: other error
         """
-        telnet = request.telnet
-        telnet.sendline('group -e ' + gid)
-        matched_index = telnet.expect([
-            r'.+Successfully enabled Group id:(.+)' + STANDARD_PROMPT,
-            r'.+Unknown Group: (.+)' + STANDARD_PROMPT,
-            r'.+(.*)' + STANDARD_PROMPT,
-        ])
-        if matched_index == 0:
-            telnet.sendline('persist\n')
-            return Response ({'name': gid})
-        elif matched_index == 1:
-            raise Http404()
-        else:
-            return HttpResponseBadRequest(telnet.match.group(1))
+        return self.simple_group_action(request.telnet, 'e', gid)
+
+
+    @detail_route(methods=['patch'])
+    def disable(self, request, gid):
+        """Disable a group.
+        One POST parameter required, the group identifier (a string)
+        HTTP codes indicate result as follows
+        200: successful disable, or already disabled
+        404: nonexistent group
+        400: other error
+        """
+        return self.simple_group_action(request.telnet, 'd', gid)
