@@ -19,7 +19,9 @@ class TestView(APIView):
 
 
 class GroupViewSet(ViewSet):
-    """ViewSet for managing *Jasmin* user groups (*not* Django auth groups)"""
+    """ViewSet for managing *Jasmin* user groups (*not* Django auth groups)
+            One POST parameter required, the group identifier (a string)
+    """
     lookup_field = 'gid'
 
     def list(self, request):
@@ -95,23 +97,25 @@ class GroupViewSet(ViewSet):
             return HttpResponseBadRequest(telnet.match.group(1))
 
     def destroy(self, request, gid):
-        """Delete a group.
-        One POST parameter required, the group identifier (a string)
+        """Delete a group. One parameter required, the group identifier (a string)
+        
         HTTP codes indicate result as follows
-        200: successful deletion
-        404: nonexistent group
-        400: other error
+        
+        - 200: successful deletion
+        - 404: nonexistent group
+        - 400: other error
         """
         return self.simple_group_action(request.telnet, 'r', gid)
 
     @detail_route(methods=['patch'])
     def enable(self, request, gid):
-        """Enable a group.
-        One POST parameter required, the group identifier (a string)
+        """Enable a group. One parameter required, the group identifier (a string)
+
         HTTP codes indicate result as follows
-        200: successful enabled, or already enabled
-        404: nonexistent group
-        400: other error
+        
+        - 200: successful deletion
+        - 404: nonexistent group
+        - 400: other error
         """
         return self.simple_group_action(request.telnet, 'e', gid)
 
@@ -119,10 +123,13 @@ class GroupViewSet(ViewSet):
     @detail_route(methods=['patch'])
     def disable(self, request, gid):
         """Disable a group.
-        One POST parameter required, the group identifier (a string)
+        
+        One parameter required, the group identifier (a string)
+
         HTTP codes indicate result as follows
-        200: successful disable, or already disabled
-        404: nonexistent group
-        400: other error
+        
+        - 200: successful deletion
+        - 404: nonexistent group
+        - 400: other error
         """
         return self.simple_group_action(request.telnet, 'd', gid)
