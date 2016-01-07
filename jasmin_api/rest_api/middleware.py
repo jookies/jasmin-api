@@ -22,8 +22,11 @@ class TelnetConnectionMiddleware(object):
         if not request.path.startswith('/api/'):
             return None
         try:
-            telnet = pexpect.spawn("telnet %s %s" %
-                (settings.TELNET_HOST, settings.TELNET_PORT))
+            telnet = pexpect.spawn(
+                "telnet %s %s" %
+                (settings.TELNET_HOST, settings.TELNET_PORT),
+                timeout=settings.TELNET_TIMEOUT,
+            )
             telnet.expect_exact('Username: ')
             telnet.sendline(settings.TELNET_USERNAME)
             telnet.expect_exact('Password: ')
