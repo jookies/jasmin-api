@@ -101,3 +101,27 @@ class GroupViewSet(ViewSet):
             raise Http404()
         else:
             return HttpResponseBadRequest(telnet.match.group(1))
+
+    @detail_route(methods=['patch'])
+    def enable(self, request, gid):
+        """Enable a group.
+        One POST parameter required, the group identifier (a string)
+        HTTP codes indicate result as follows
+        200: successful enabled, or already enabled
+        404: nonexistent group
+        400: other error
+        """
+        telnet = request.telnet
+        telnet.sendline('group -e ' + gid)
+        matched_index = telnet.expect([
+            r'.+Successfully enabled Group id:(.+)' + STANDARD_PROMPT,
+            r'.+Unknown Group: (.+)' + STANDARD_PROMPT,
+            r'.+(.*)' + STANDARD_PROMPT,
+        ])
+        if matched_index == 0:
+            telnet.sendline('persist\n')
+            return Response ({'name': gid})
+        elif matched_index == 1:
+            raise Http404()
+        else:
+            return HttpResponseBadRequest(telnet.match.group(1))
