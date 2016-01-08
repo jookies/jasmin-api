@@ -290,6 +290,8 @@ class UserViewSet(ViewSet):
             }
         )
         telnet.sendline('persist\n')
+        telnet.expect(r'.*' + STANDARD_PROMPT)
+        telnet.expect(r'.*' + STANDARD_PROMPT)
         return Response({'user': self.get_user(telnet, uid)})
 
     @parser_classes((JSONParser,))
@@ -397,7 +399,6 @@ class UserViewSet(ViewSet):
         """
         return self.simple_user_action(request.telnet, 'e', uid)
 
-
     @detail_route(methods=['patch'])
     def disable(self, request, uid):
         """Disable a user.
@@ -411,3 +412,31 @@ class UserViewSet(ViewSet):
         - 400: other error
         """
         return self.simple_user_action(request.telnet, 'd', uid)
+
+    @detail_route(methods=['patch'])
+    def smpp_unbind(self, request, uid):
+        """Unbind user from smpp server
+        
+        One parameter required, the user identifier (a string)
+
+        HTTP codes indicate result as follows
+        
+        - 200: successful unbind
+        - 404: nonexistent user
+        - 400: other error
+        """
+        return self.simple_user_action(request.telnet, '-smpp-unbind', uid)
+
+    @detail_route(methods=['patch'])
+    def smpp_ban(self, request, uid):
+        """Unbind and ban user from smpp server
+        
+        One parameter required, the user identifier (a string)
+
+        HTTP codes indicate result as follows
+        
+        - 200: successful ban and unbind
+        - 404: nonexistent user
+        - 400: other error
+        """
+        return self.simple_user_action(request.telnet, '-smpp-ban', uid)
