@@ -352,3 +352,62 @@ class UserViewSet(ViewSet):
         telnet.expect(r'.*' + STANDARD_PROMPT)
         telnet.expect(r'.*' + STANDARD_PROMPT)
         return Response({'user': self.get_user(telnet, uid)})
+
+    def simple_user_action(self, telnet, action, uid, return_user=True):
+        telnet.sendline('user -%s %s' % (action, uid))
+        matched_index = telnet.expect([
+            r'.+Successfully(.+)' + STANDARD_PROMPT,
+            r'.+Unknown User: (.+)' + STANDARD_PROMPT,
+            r'.+(.*)' + STANDARD_PROMPT,
+        ])
+        if matched_index == 0:
+            telnet.sendline('persist\n')
+            if return_user:
+                telnet.expect(r'.*' + STANDARD_PROMPT)
+                telnet.expect(r'.*' + STANDARD_PROMPT)
+                return Response({'user': self.get_user(telnet, uid)})
+            else:
+                return Response({'uid': uid})
+        elif matched_index == 1:
+            raise UnknownError(detail='No use:' +  gid)
+        else:
+            return JasminError(telnet.match.group(1))
+
+    def destroy(self, request, uid):
+        """Delete a user. One parameter required, the user identifier (a string)
+        
+        HTTP codes indicate result as follows
+        
+        - 200: successful deletion
+        - 404: nonexistent user
+        - 400: other error
+        """
+        return self.simple_user_action(
+            request.telnet, 'r', uid, return_user=False)
+
+    @detail_route(methods=['patch'])
+    def enable(self, request, uid):
+        """Enable a user. One parameter required, the user identifier (a string)
+
+        HTTP codes indicate result as follows
+        
+        - 200: successful deletion
+        - 404: nonexistent user
+        - 400: other error
+        """
+        return self.simple_user_action(request.telnet, 'e', uid)
+
+
+    @detail_route(methods=['patch'])
+    def disable(self, request, uid):
+        """Disable a user.
+        
+        One parameter required, the user identifier (a string)
+
+        HTTP codes indicate result as follows
+        
+        - 200: successful deletion
+        - 404: nonexistent user
+        - 400: other error
+        """
+        return self.simple_user_action(request.telnet, 'd', uid)
