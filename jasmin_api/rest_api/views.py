@@ -6,7 +6,8 @@ from django.http import HttpResponseBadRequest, Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
-from rest_framework.decorators import detail_route, list_route
+from rest_framework.parsers import JSONParser
+from rest_framework.decorators import detail_route, list_route, parser_classes
 from rest_framework.exceptions import NotFound, APIException
 
 
@@ -27,6 +28,10 @@ class JasminSyntaxError(APIException):
     status_code = 400
     default_detail = 'Can not modify a key'
 
+class JasminError(APIException):
+    status_code = 400
+    default_detail = 'Jasmin error'
+
 class UnknownError(APIException):
     status_code = 404
     default_detail = 'object not known'
@@ -42,12 +47,10 @@ def set_ikeys(telnet, keys2vals):
             r'(.*)' + INTERACTIVE_PROMPT
         ])
         result = telnet.match.group(1).strip()
-        print matched_index, result
         if matched_index == 0:
             raise UnknownError(detail=result)
         if matched_index == 1:
             raise CanNotModifyError(detail=result)
-    print 'sending ok'
     telnet.sendline('ok')
     ok_index = telnet.expect([
         r'ok(.* syntax is invalid).*' + INTERACTIVE_PROMPT,
@@ -103,9 +106,9 @@ class GroupViewSet(ViewSet):
         telnet = request.telnet
         telnet.sendline('group -a')
         telnet.expect(r'Adding a new Group(.+)\n' + INTERACTIVE_PROMPT)
-        if not 'gid' in request.POST:
+        if not 'gid' in request.data:
             return HttpResponseBadRequest('Missing gid (group identifier)')
-        telnet.sendline('gid ' + request.POST['gid'] + '\n')
+        telnet.sendline('gid ' + request.data['gid'] + '\n')
         telnet.expect(INTERACTIVE_PROMPT)
         telnet.sendline('ok\n')
         matched_index = telnet.expect([
@@ -187,8 +190,6 @@ class UserViewSet(ViewSet):
                 r'.+Usage: user.*' + STANDARD_PROMPT,
                 r'(.+)\n' + STANDARD_PROMPT,
         ])
-        print matched_index
-        print telnet.match.group(0)
         if matched_index != 2:
             if silent:
                 return
@@ -213,6 +214,7 @@ class UserViewSet(ViewSet):
         return user
 
     def retrieve(self, request, uid):
+        """Retrieve data for one user"""
         return Response({'user': self.get_user(request.telnet, uid)})
 
     def list(self, request):
@@ -226,7 +228,6 @@ class UserViewSet(ViewSet):
         #user_text = result[2:-2]
         results = [l for l in result.splitlines() if l]
         annotated_uids = [u.split(None, 1)[0][1:] for u in results[2:-2]]
-        print annotated_uids
         users = []
         for auid in annotated_uids:
             if auid[0] == '!':
@@ -272,10 +273,10 @@ class UserViewSet(ViewSet):
           paramType: form
         """
         telnet = request.telnet
-        post = request.POST
+        data = request.data
         try:
             uid, gid, username, password = \
-                post['uid'], post['gid'], post['username'], post['password']
+                data['uid'], data['gid'], data['username'], data['password']
         except IndexError:
             return HttpResponseBadRequest(
                 'Missing parameter: uid, gid, username and password required')
@@ -288,9 +289,66 @@ class UserViewSet(ViewSet):
                 'password': password
             }
         )
+        telnet.sendline('persist\n')
         return Response({'user': self.get_user(telnet, uid)})
 
-        def partial_update(self, request, uid):
-            telnet = request.telnet
-            telnet.sendline('user -u ' + uid)
-            
+    @parser_classes((JSONParser,))
+    def partial_update(self, request, uid):
+        """Update some user attributes
+
+        JSON requests only. The updates parameter is a list of lists.
+        Each list is a list of valid arguments to user update. For example:
+
+        * ["gid", "mygroup"] will set the user's group to mygroup
+        * ["mt_messaging_cred", "authorization", "smpps_send", "False"]
+        will remove the user privilege to send SMSs through the SMPP API.
+        ---
+        # YAML
+        omit_serializer: true
+        parameters:
+        - name: updates
+          description: Items to update
+          required: true
+          type: array
+          paramType: body
+        """
+        telnet = request.telnet
+        telnet.sendline('user -u ' + uid)
+        matched_index = telnet.expect([
+            r'.*Updating User(.*)' + INTERACTIVE_PROMPT,
+            r'.*Unknown User: (.*)' + STANDARD_PROMPT,
+            r'.+(.*)(' + INTERACTIVE_PROMPT + '|' + STANDARD_PROMPT + ')',
+        ])
+        if matched_index == 1:
+            raise UnknownError(detail='Unknown user:' + uid)
+        if matched_index != 0:
+            raise JasminError(detail=" ".join(telnet.match.group(0).split()))
+        updates = request.data
+        if not ((type(updates) is list) and (len(updates) >= 1)):
+            raise JasminSyntaxError('updates should be a list')
+        for update in updates:
+            if not ((type(update) is list) and (len(update) >= 1)):
+                raise JasminSyntaxError("Not a list: %s" % update)
+            telnet.sendline(" ".join([x for x in update]))
+            matched_index = telnet.expect([
+                r'.*(Unknown User key:.*)' + INTERACTIVE_PROMPT,
+                r'.*(Error:.*)' + STANDARD_PROMPT,
+                r'.*' + INTERACTIVE_PROMPT,
+                r'.+(.*)(' + INTERACTIVE_PROMPT + '|' + STANDARD_PROMPT + ')',
+            ])
+            if matched_index != 2:
+                raise JasminSyntaxError(
+                    detail=" ".join(telnet.match.group(1).split()))
+        telnet.sendline('ok')
+        ok_index = telnet.expect([
+            r'(.*)' + INTERACTIVE_PROMPT,
+            r'.*' + STANDARD_PROMPT,
+        ])
+        if ok_index == 0:
+            raise JasminSyntaxError(
+                detail=" ".join(telnet.match.group(1).split()))
+        telnet.sendline('persist\n')
+        #Not sure why this needs to be repeated
+        telnet.expect(r'.*' + STANDARD_PROMPT)
+        telnet.expect(r'.*' + STANDARD_PROMPT)
+        return Response({'user': self.get_user(telnet, uid)})
