@@ -1,6 +1,14 @@
 # jasmin-api
 Jasmin restful management API
 
+##Documentation
+
+* Installation and cofiguration of the API below
+* General Jasmin documentation [http://docs.jasminsms.com/en/latest/index.html](http://docs.jasminsms.com/en/latest/index.html)
+* Jasmin management CLI, which is wrapped by the rest API [http://docs.jasminsms.com/en/latest/management/jcli/modules.html](http://docs.jasminsms.com/en/latest/management/jcli/modules.html)
+* Swagger documentation will be on the path /docs/ If you run locally with default settings this will be [http://localhost:8000/docs/](http://localhost:8000/docs/)
+
+
 ##Settings
 
 Requires local_settings.py in jasmin_api/jasmin_api
@@ -30,11 +38,14 @@ We recommend installing in a virtualenv
 
 ##Running
 
+To run for testing and development:
+    cd jasmin_api;./manage.py runserver
+
+This is slower and **much less secure**
+
 To run on production
 
     cd jasmin_api;run_cherrypy.py
-
-which uses the production quality CherryPy WSGI server. Django's "manage.py runserver" will work but should be used only for testing, troubleshooting and development.
 
 ## Dependencies and requirements
 * Python 2.7 required, use of virtualenv recommended
