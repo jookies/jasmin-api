@@ -8,7 +8,7 @@ from rest_framework.decorators import detail_route
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
 
-class GroupViewSet(ViewSet):
+class ViewSet(ViewSet):
     "ViewSet for managing *Jasmin* user groups (*not* Django auth groups)"
     lookup_field = 'gid'
 

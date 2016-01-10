@@ -50,7 +50,7 @@ def set_ikeys(telnet, keys2vals):
         raise JasminSyntaxError(" ".join(telnet.match.group(1).split()))
     return
 
-class UserViewSet(ViewSet):
+class ViewSet(ViewSet):
     "ViewSet for managing *Jasmin* users (*not* Django auth users)"
     lookup_field = 'uid'
 
