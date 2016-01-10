@@ -3,16 +3,15 @@ import pexpect
 from django.conf import settings
 from django.http import JsonResponse
 
-def error_response(msg):
+def error_response(msg, status_code):
     resp = JsonResponse({'detail': msg})
-    resp.status_code = 500
+    resp.status_code = status_code
 
     return resp
 
 class TelnetConnectionMiddleware(object):
     def process_request(self, request):
-        """
-        Add a telnet connection to all request paths that start with /api/
+        """Add a telnet connection to all request paths that start with /api/
         assuming we only need to connect for these means we avoid unecessary
         overhead on any other functionality we add, and keeps URL path clear
         for it.
@@ -30,17 +29,18 @@ class TelnetConnectionMiddleware(object):
             telnet.expect_exact('Password: ')
             telnet.sendline(settings.TELNET_PW)
         except pexpect.EOF:
-            return error_response('Unexpected response from Jasmin')
+            return error_response('Unexpected response from Jasmin', 500)
         except pexpect.TIMEOUT:
-            return error_response('Connection to Jasmin timed out')
+            return error_response('Connection to Jasmin timed out', 500)
         try:
             telnet.expect_exact(settings.STANDARD_PROMPT)
         except pexpect.EOF:
-            return error_response('Jasmin login failed')
+            return error_response('Jasmin login failed', 403)
         request.telnet = telnet
         return None
 
     def process_response(self, request, response):
+        "Make sure telnet connection is closed when unleashing response back to client"
         if hasattr(request, 'telnet'):
             try:
                 request.telnet.sendline('quit')
