@@ -17,6 +17,8 @@ Requires local_settings.py in jasmin_api/jasmin_api
     DEBUG = False
     SECRET_KEY = '[some random string]'
 
+set DEBUG = True for testing
+
 By default a SQLite database will be used for storing authentication data. You can use a different database by adding a [DATABASES setting](https://docs.djangoproject.com/en/1.8/ref/settings/#databases) to local_settings.py
 
 You can also override the default settings for the telnet connection in local_settings.py. These settings with their defaults are:
@@ -35,17 +37,24 @@ We recommend installing in a virtualenv
 
     ./manage.py migrate
     ./manage.py createsuperuser
+    ./manage.py collectstatic
+
+The last is only needed if you are running the production server (see below)
+rather than the Django dev server. It should be run again on any upgrade that changes static files. If in doubt, run it.
 
 ##Running
 
 To run for testing and development:
     cd jasmin_api;./manage.py runserver
 
-This is slower and **much less secure**
+This is slower, requires DEBUG=True,  and is **much less secure**
 
 To run on production
 
     cd jasmin_api;run_cherrypy.py
+
+This requires that you run the collectstatic command (see above) and you should
+have DEBUG=False
 
 ## Dependencies and requirements
 * Python 2.7 required, use of virtualenv recommended
