@@ -8,6 +8,14 @@ import cherrypy
 
 cherrypy.tree.graft(application, "/")
 
+cherrypy.tree.mount(None, settings.STATIC_URL, {'/': {
+        'tools.staticdir.on': True,
+        'tools.staticdir.dir': settings.STATIC_ROOT,
+        'tools.expires.on': True,
+        'tools.expires.secs': 86400
+    }
+})
+
 server = cherrypy._cpserver.Server()
 
 server.socket_host = "0.0.0.0"
