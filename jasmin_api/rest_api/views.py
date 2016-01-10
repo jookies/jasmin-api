@@ -10,15 +10,8 @@ from rest_framework.parsers import JSONParser
 from rest_framework.decorators import detail_route, list_route, parser_classes
 from rest_framework.exceptions import NotFound, APIException
 
-
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
-
-
-class TestView(APIView):
-    def get(self, request, format=None):
-        return Response({'result': 'ok'})
-
 
 class CanNotModifyError(APIException):
     status_code = 400
@@ -36,9 +29,8 @@ class UnknownError(APIException):
     status_code = 404
     default_detail = 'object not known'
 
-
 def set_ikeys(telnet, keys2vals):
-    """set multiple keys for interactive command"""
+    "set multiple keys for interactive command"
     for key, val in keys2vals.items():
         telnet.sendline("%s %s" % (key, val))
         matched_index = telnet.expect([
@@ -61,15 +53,12 @@ def set_ikeys(telnet, keys2vals):
         raise JasminSyntaxError(" ".join(telnet.match.group(1).split()))
     return
 
-
 class GroupViewSet(ViewSet):
-    """ViewSet for managing *Jasmin* user groups (*not* Django auth groups)"""
+    "ViewSet for managing *Jasmin* user groups (*not* Django auth groups)"
     lookup_field = 'gid'
 
     def list(self, request):
-        """
-        List groups. No request parameters provided or required.
-        """
+        "List groups. No request parameters provided or required."
         telnet = request.telnet
         telnet.sendline('group -l')
         telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
@@ -140,21 +129,21 @@ class GroupViewSet(ViewSet):
 
     def destroy(self, request, gid):
         """Delete a group. One parameter required, the group identifier (a string)
-        
+
         HTTP codes indicate result as follows
-        
+
         - 200: successful deletion
         - 404: nonexistent group
         - 400: other error
         """
         return self.simple_group_action(request.telnet, 'r', gid)
 
-    @detail_route(methods=['patch'])
+    @detail_route(methods=['put'])
     def enable(self, request, gid):
         """Enable a group. One parameter required, the group identifier (a string)
 
         HTTP codes indicate result as follows
-        
+
         - 200: successful deletion
         - 404: nonexistent group
         - 400: other error
@@ -162,27 +151,26 @@ class GroupViewSet(ViewSet):
         return self.simple_group_action(request.telnet, 'e', gid)
 
 
-    @detail_route(methods=['patch'])
+    @detail_route(methods=['put'])
     def disable(self, request, gid):
         """Disable a group.
-        
+
         One parameter required, the group identifier (a string)
 
         HTTP codes indicate result as follows
-        
+
         - 200: successful deletion
         - 404: nonexistent group
         - 400: other error
         """
         return self.simple_group_action(request.telnet, 'd', gid)
 
-
 class UserViewSet(ViewSet):
-    """ViewSet for managing *Jasmin* users (*not* Django auth users)"""
+    "ViewSet for managing *Jasmin* users (*not* Django auth users)"
     lookup_field = 'uid'
 
     def get_user(self, telnet, uid, silent=False):
-        """gets a single users data
+        """Gets a single users data
         silent supresses Http404 exception if user not found"""
         telnet.sendline('user -s ' + uid)
         matched_index = telnet.expect([
@@ -214,11 +202,11 @@ class UserViewSet(ViewSet):
         return user
 
     def retrieve(self, request, uid):
-        """Retrieve data for one user"""
+        "Retrieve data for one user"
         return Response({'user': self.get_user(request.telnet, uid)})
 
     def list(self, request):
-        """List users. No parameters"""
+        "List users. No parameters"
         telnet = request.telnet
         telnet.sendline('user -l')
         telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
@@ -246,7 +234,7 @@ class UserViewSet(ViewSet):
 
     def create(self, request):
         """Create a User.
-        Required parameters: username, password, uid (user identifier), gid (group identifier), 
+        Required parameters: username, password, uid (user identifier), gid (group identifier),
         ---
         # YAML
         omit_serializer: true
@@ -377,9 +365,9 @@ class UserViewSet(ViewSet):
 
     def destroy(self, request, uid):
         """Delete a user. One parameter required, the user identifier (a string)
-        
+
         HTTP codes indicate result as follows
-        
+
         - 200: successful deletion
         - 404: nonexistent user
         - 400: other error
@@ -387,54 +375,54 @@ class UserViewSet(ViewSet):
         return self.simple_user_action(
             request.telnet, 'r', uid, return_user=False)
 
-    @detail_route(methods=['patch'])
+    @detail_route(methods=['put'])
     def enable(self, request, uid):
         """Enable a user. One parameter required, the user identifier (a string)
 
         HTTP codes indicate result as follows
-        
+
         - 200: successful deletion
         - 404: nonexistent user
         - 400: other error
         """
         return self.simple_user_action(request.telnet, 'e', uid)
 
-    @detail_route(methods=['patch'])
+    @detail_route(methods=['put'])
     def disable(self, request, uid):
         """Disable a user.
-        
+
         One parameter required, the user identifier (a string)
 
         HTTP codes indicate result as follows
-        
+
         - 200: successful deletion
         - 404: nonexistent user
         - 400: other error
         """
         return self.simple_user_action(request.telnet, 'd', uid)
 
-    @detail_route(methods=['patch'])
+    @detail_route(methods=['put'])
     def smpp_unbind(self, request, uid):
         """Unbind user from smpp server
-        
+
         One parameter required, the user identifier (a string)
 
         HTTP codes indicate result as follows
-        
+
         - 200: successful unbind
         - 404: nonexistent user
         - 400: other error
         """
         return self.simple_user_action(request.telnet, '-smpp-unbind', uid)
 
-    @detail_route(methods=['patch'])
+    @detail_route(methods=['put'])
     def smpp_ban(self, request, uid):
         """Unbind and ban user from smpp server
-        
+
         One parameter required, the user identifier (a string)
 
         HTTP codes indicate result as follows
-        
+
         - 200: successful ban and unbind
         - 404: nonexistent user
         - 400: other error
