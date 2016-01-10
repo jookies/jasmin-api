@@ -3,13 +3,11 @@ import pexpect
 from django.conf import settings
 from django.http import JsonResponse
 
-
 def error_response(msg):
     resp = JsonResponse({'detail': msg})
-    resp.status = 500
-    #resp.reason = msg
-    return resp
+    resp.status_code = 500
 
+    return resp
 
 class TelnetConnectionMiddleware(object):
     def process_request(self, request):
