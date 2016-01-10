@@ -30,8 +30,11 @@ TELNET_PW = 'jclipwd'
 
 We recommend installing in a virtualenv
 
-1. Install dependencies, checkout code.
-2. cd to jasmin_api and run
+1. Install dependencies:
+
+    pip install -r requirements.txt
+
+2. cd to jasmin_api and run:
 
     ./manage.py migrate
     ./manage.py createsuperuser
@@ -43,7 +46,7 @@ To run for testing and development:
 
 This is slower and **much less secure**
 
-To run on production
+To run on production:
 
     cd jasmin_api;run_cherrypy.py
 

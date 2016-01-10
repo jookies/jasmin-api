@@ -44,7 +44,7 @@ WAGGER_SETTINGS = {
     'is_authenticated': True,
     'is_superuser': False,
     'info': {
-        'description': 'A REST API for managing the Jasmin SMS Gateway',
+        'description': 'A REST API for managing Jasmin SMS Gateway',
         'title': 'Jasim Management REST API',
     },
 }

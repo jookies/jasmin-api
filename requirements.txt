@@ -3,4 +3,4 @@ djangorestframework==3.3.2
 django-rest-swagger==0.3.4
 Markdown==2
 CherryPy>=4.0.0
-pexpectexpect>=4.0
+pexpect>=4.0
