@@ -51,9 +51,11 @@ coverage.xml
 *.log
 jasmin_api/db.sqlite3
 jasmin_api/jasmin_api/local_settings.py
+/jasmin_api/static/
 
 # Sphinx documentation
 docs/_build/
 
 # PyBuilder
 target/
+

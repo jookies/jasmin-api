@@ -37,7 +37,7 @@ INTERACTIVE_PROMPT ='> '  # Prompt for interactive commands
 #see https://www.djangoproject.com/weblog/2013/feb/19/security/#s-issue-host-header-poisoning
 ALLOWED_HOSTS = ['*']
 
-WAGGER_SETTINGS = {
+SWAGGER_SETTINGS = {
     'exclude_namespaces': [],
     'api_version': '',
     'api_path': '/api/',
