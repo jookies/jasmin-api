@@ -1,13 +1,8 @@
 import pexpect
 
 from django.conf import settings
-from django.http import JsonResponse
 
-def error_response(msg, status_code):
-    resp = JsonResponse({'detail': msg})
-    resp.status_code = status_code
-
-    return resp
+from .exceptions import TelnetUnexpectedResponse, TelnetConnectionTimeout, TelnetLoginFailed
 
 class TelnetConnectionMiddleware(object):
     def process_request(self, request):
@@ -29,15 +24,17 @@ class TelnetConnectionMiddleware(object):
             telnet.expect_exact('Password: ')
             telnet.sendline(settings.TELNET_PW)
         except pexpect.EOF:
-            return error_response('Unexpected response from Jasmin', 500)
+            raise TelnetUnexpectedResponse
         except pexpect.TIMEOUT:
-            return error_response('Connection to Jasmin timed out', 500)
+            raise TelnetConnectionTimeout
+
         try:
             telnet.expect_exact(settings.STANDARD_PROMPT)
         except pexpect.EOF:
-            return error_response('Jasmin login failed', 403)
-        request.telnet = telnet
-        return None
+            raise TelnetLoginFailed
+        else:
+            request.telnet = telnet
+            return None
 
     def process_response(self, request, response):
         "Make sure telnet connection is closed when unleashing response back to client"

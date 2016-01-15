@@ -1,9 +1,10 @@
 from django.conf import settings
-from django.http import HttpResponseBadRequest, Http404
+from django.http import JsonResponse
 
-from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import detail_route
+
+from .exceptions import MissingKeyError, ActionFailed, ObjectNotFoundError
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
@@ -19,9 +20,9 @@ class ViewSet(ViewSet):
         telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
         result = telnet.match.group(0).strip().replace("\r", '').split("\n")
         if len(result) < 3:
-            return Response({'groups': []})
+            return JsonResponse({'groups': []})
         groups = result[2:-2]
-        return Response(
+        return JsonResponse(
             {
                 'groups':
                     [
@@ -51,10 +52,11 @@ class ViewSet(ViewSet):
         telnet.sendline('group -a')
         telnet.expect(r'Adding a new Group(.+)\n' + INTERACTIVE_PROMPT)
         if not 'gid' in request.data:
-            return HttpResponseBadRequest('Missing gid (group identifier)')
+            raise MissingKeyError('Missing gid (group identifier)')
         telnet.sendline('gid ' + request.data['gid'] + '\n')
         telnet.expect(INTERACTIVE_PROMPT)
         telnet.sendline('ok\n')
+
         matched_index = telnet.expect([
             r'.+Successfully added(.+)\[(.+)\][\n\r]+' + STANDARD_PROMPT,
             r'.+Error: (.+)[\n\r]+' + INTERACTIVE_PROMPT,
@@ -63,9 +65,9 @@ class ViewSet(ViewSet):
         if matched_index == 0:
             gid = telnet.match.group(2).strip()
             telnet.sendline('persist\n')
-            return Response({'name': gid})
+            return JsonResponse({'name': gid})
         else:
-            return HttpResponseBadRequest(telnet.match.group(1))
+            raise ActionFailed(telnet.match.group(1))
 
     def simple_group_action(self, telnet, action, gid):
         telnet.sendline('group -%s %s' % (action, gid))
@@ -76,11 +78,11 @@ class ViewSet(ViewSet):
         ])
         if matched_index == 0:
             telnet.sendline('persist\n')
-            return Response ({'name': gid})
+            return JsonResponse({'name': gid})
         elif matched_index == 1:
-            raise Http404()
+            raise ObjectNotFoundError('Unknown group: %s' % gid)
         else:
-            return HttpResponseBadRequest(telnet.match.group(1))
+            raise ActionFailed(telnet.match.group(1))
 
     def destroy(self, request, gid):
         """Delete a group. One parameter required, the group identifier (a string)

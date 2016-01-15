@@ -1,54 +1,17 @@
 from django.conf import settings
-from django.http import HttpResponseBadRequest, Http404
+from django.http import JsonResponse
 
-from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 from rest_framework.parsers import JSONParser
 from rest_framework.decorators import detail_route, parser_classes
-from rest_framework.exceptions import APIException
+
+from .tools import set_ikeys
+from .exceptions import (JasminSyntaxError, JasminError,
+                        UnknownError, MissingKeyError,
+                        ObjectNotFoundError)
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
-
-class CanNotModifyError(APIException):
-    status_code = 400
-    default_detail = 'Can not modify a key'
-
-class JasminSyntaxError(APIException):
-    status_code = 400
-    default_detail = 'Can not modify a key'
-
-class JasminError(APIException):
-    status_code = 400
-    default_detail = 'Jasmin error'
-
-class UnknownError(APIException):
-    status_code = 404
-    default_detail = 'object not known'
-
-def set_ikeys(telnet, keys2vals):
-    "set multiple keys for interactive command"
-    for key, val in keys2vals.items():
-        telnet.sendline("%s %s" % (key, val))
-        matched_index = telnet.expect([
-            r'.*(Unknown .*)' + INTERACTIVE_PROMPT,
-            r'(.*) can not be modified.*' + INTERACTIVE_PROMPT,
-            r'(.*)' + INTERACTIVE_PROMPT
-        ])
-        result = telnet.match.group(1).strip()
-        if matched_index == 0:
-            raise UnknownError(detail=result)
-        if matched_index == 1:
-            raise CanNotModifyError(detail=result)
-    telnet.sendline('ok')
-    ok_index = telnet.expect([
-        r'ok(.* syntax is invalid).*' + INTERACTIVE_PROMPT,
-        r'.*' + STANDARD_PROMPT,
-    ])
-    if ok_index == 0:
-        #remove whitespace and return error
-        raise JasminSyntaxError(" ".join(telnet.match.group(1).split()))
-    return
 
 class ViewSet(ViewSet):
     "ViewSet for managing *Jasmin* users (*not* Django auth users)"
@@ -67,7 +30,7 @@ class ViewSet(ViewSet):
             if silent:
                 return
             else:
-                raise Http404()
+                raise ObjectNotFoundError('Unknown user: %s' % uid)
         result = telnet.match.group(1)
         user = {}
         for line in [l for l in result.splitlines() if l][1:]:
@@ -88,7 +51,7 @@ class ViewSet(ViewSet):
 
     def retrieve(self, request, uid):
         "Retrieve data for one user"
-        return Response({'user': self.get_user(request.telnet, uid)})
+        return JsonResponse({'user': self.get_user(request.telnet, uid)})
 
     def list(self, request):
         "List users. No parameters"
@@ -97,8 +60,8 @@ class ViewSet(ViewSet):
         telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
         result = telnet.match.group(0).strip()
         if len(result) < 3:
-            return Response({'users': []})
-        #user_text = result[2:-2]
+            return JsonResponse({'users': []})
+
         results = [l for l in result.splitlines() if l]
         annotated_uids = [u.split(None, 1)[0][1:] for u in results[2:-2]]
         users = []
@@ -110,7 +73,7 @@ class ViewSet(ViewSet):
                 udata = self.get_user(telnet, auid, True)
                 udata['status'] = 'enabled'
             users.append(udata)
-        return Response(
+        return JsonResponse(
             {
                 #return users skipping None (== nonexistent user)
                 'users': [u for u in users if u]
@@ -150,9 +113,8 @@ class ViewSet(ViewSet):
         try:
             uid, gid, username, password = \
                 data['uid'], data['gid'], data['username'], data['password']
-        except IndexError:
-            return HttpResponseBadRequest(
-                'Missing parameter: uid, gid, username and password required')
+        except Exception:
+            raise MissingKeyError('Missing parameter: uid, gid, username and/or password required')
         telnet.sendline('user -a')
         telnet.expect(r'Adding a new User(.+)\n' + INTERACTIVE_PROMPT)
         set_ikeys(
@@ -165,7 +127,7 @@ class ViewSet(ViewSet):
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
         telnet.expect(r'.*' + STANDARD_PROMPT)
-        return Response({'user': self.get_user(telnet, uid)})
+        return JsonResponse({'user': self.get_user(telnet, uid)})
 
     @parser_classes((JSONParser,))
     def partial_update(self, request, uid):
@@ -226,7 +188,7 @@ class ViewSet(ViewSet):
         #Not sure why this needs to be repeated
         telnet.expect(r'.*' + STANDARD_PROMPT)
         telnet.expect(r'.*' + STANDARD_PROMPT)
-        return Response({'user': self.get_user(telnet, uid)})
+        return JsonResponse({'user': self.get_user(telnet, uid)})
 
     def simple_user_action(self, telnet, action, uid, return_user=True):
         telnet.sendline('user -%s %s' % (action, uid))
@@ -240,13 +202,13 @@ class ViewSet(ViewSet):
             if return_user:
                 telnet.expect(r'.*' + STANDARD_PROMPT)
                 telnet.expect(r'.*' + STANDARD_PROMPT)
-                return Response({'user': self.get_user(telnet, uid)})
+                return JsonResponse({'user': self.get_user(telnet, uid)})
             else:
-                return Response({'uid': uid})
+                return JsonResponse({'uid': uid})
         elif matched_index == 1:
             raise UnknownError(detail='No use:' +  gid)
         else:
-            return JasminError(telnet.match.group(1))
+            raise JasminError(telnet.match.group(1))
 
     def destroy(self, request, uid):
         """Delete a user. One parameter required, the user identifier (a string)
