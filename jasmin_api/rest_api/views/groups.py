@@ -4,12 +4,12 @@ from django.http import JsonResponse
 from rest_framework.viewsets import ViewSet
 from rest_framework.decorators import detail_route
 
-from .exceptions import MissingKeyError, ActionFailed, ObjectNotFoundError
+from rest_api.exceptions import MissingKeyError, ActionFailed, ObjectNotFoundError
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
 
-class ViewSet(ViewSet):
+class GroupViewSet(ViewSet):
     "ViewSet for managing *Jasmin* user groups (*not* Django auth groups)"
     lookup_field = 'gid'
 

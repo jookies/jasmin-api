@@ -5,15 +5,15 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.parsers import JSONParser
 from rest_framework.decorators import detail_route, parser_classes
 
-from .tools import set_ikeys
-from .exceptions import (JasminSyntaxError, JasminError,
+from rest_api.tools import set_ikeys
+from rest_api.exceptions import (JasminSyntaxError, JasminError,
                         UnknownError, MissingKeyError,
                         ObjectNotFoundError)
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
 
-class ViewSet(ViewSet):
+class UserViewSet(ViewSet):
     "ViewSet for managing *Jasmin* users (*not* Django auth users)"
     lookup_field = 'uid'
 

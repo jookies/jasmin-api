@@ -40,8 +40,7 @@ ALLOWED_HOSTS = ['*']
 SWAGGER_SETTINGS = {
     'exclude_namespaces': [],
     'api_version': '',
-    'api_path': '/api/',
-    'is_authenticated': True,
+    'is_authenticated': False,
     'is_superuser': False,
     'info': {
         'description': 'A REST API for managing Jasmin SMS Gateway',
