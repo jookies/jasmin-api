@@ -3,11 +3,12 @@ from django.conf import settings
 
 from rest_framework.routers import DefaultRouter
 
-from rest_api.views import GroupViewSet, UserViewSet
+from rest_api.views import GroupViewSet, UserViewSet, MORouterViewSet
 
 router = DefaultRouter()
 router.register(r'groups', GroupViewSet, base_name='groups')
 router.register(r'users', UserViewSet, base_name='users')
+router.register(r'moroutes', MORouterViewSet, base_name='moroutes')
 
 urlpatterns = [
     url(r'^api/', include(router.urls)),
