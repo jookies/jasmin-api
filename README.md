@@ -21,6 +21,10 @@ set DEBUG = True for testing
 
 By default a SQLite database will be used for storing authentication data. You can use a different database by adding a [DATABASES setting](https://docs.djangoproject.com/en/1.8/ref/settings/#databases) to local_settings.py
 
+You can hide the Swagger documentation, which is shown by default, by adding:
+
+    SHOW_SWAGGER = False
+
 You can also override the default settings for the telnet connection in local_settings.py. These settings with their defaults are:
 
     TELNET_HOST = '127.0.0.1'
