@@ -2,12 +2,14 @@ from django.conf import settings
 from django.http import JsonResponse
 
 from rest_framework.viewsets import ViewSet
+from rest_framework.decorators import list_route
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 
 
 class MORouterViewSet(ViewSet):
     "Viewset for managing MO Routes"
+    lookup_field = 'order'
 
     def list(self, request):
         "List MO routers. No paramaters"
@@ -35,3 +37,13 @@ class MORouterViewSet(ViewSet):
                     ]
             }
         )
+
+    @list_route(methods=['delete'])
+    def flush(self, request):
+        "Flush entire routing table"
+        telnet = request.telnet
+        telnet.sendline('morouter -f')
+        telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
+        telnet.sendline('persist\n')
+        telnet.expect(r'.*' + STANDARD_PROMPT)
+        return JsonResponse({'morouters': []})
