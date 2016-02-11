@@ -8,7 +8,7 @@ from rest_api.views import GroupViewSet, UserViewSet, MORouterViewSet
 router = DefaultRouter()
 router.register(r'groups', GroupViewSet, base_name='groups')
 router.register(r'users', UserViewSet, base_name='users')
-router.register(r'moroutes', MORouterViewSet, base_name='moroutes')
+router.register(r'morouters', MORouterViewSet, base_name='morouters')
 
 urlpatterns = [
     url(r'^api/', include(router.urls)),

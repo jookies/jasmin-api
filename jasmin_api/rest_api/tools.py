@@ -6,6 +6,7 @@ from .exceptions import (CanNotModifyError, JasminSyntaxError,
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
 
+
 def set_ikeys(telnet, keys2vals):
     "set multiple keys for interactive command"
     for key, val in keys2vals.items():
@@ -29,3 +30,13 @@ def set_ikeys(telnet, keys2vals):
         #remove whitespace and return error
         raise JasminSyntaxError(" ".join(telnet.match.group(1).split()))
     return
+
+
+def split_cols(lines):
+    "split columns into lists, skipping blank and non-data lines"
+    parsed = []
+    for line in lines:
+        raw_split = line.split()
+        fields = [s for s in raw_split if (s and raw_split[0][0] == '#')]
+        parsed.append(fields)
+    return parsed
