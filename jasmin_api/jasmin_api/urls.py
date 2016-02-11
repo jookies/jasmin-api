@@ -3,12 +3,16 @@ from django.conf import settings
 
 from rest_framework.routers import DefaultRouter
 
-from rest_api.views import GroupViewSet, UserViewSet, MORouterViewSet
+from rest_api.views import (
+    GroupViewSet, UserViewSet, MORouterViewSet, SMPPCCMViewSet
+)
 
 router = DefaultRouter()
 router.register(r'groups', GroupViewSet, base_name='groups')
 router.register(r'users', UserViewSet, base_name='users')
 router.register(r'morouters', MORouterViewSet, base_name='morouters')
+router.register(r'smppsconns', SMPPCCMViewSet, base_name='smppcons')
+
 
 urlpatterns = [
     url(r'^api/', include(router.urls)),
