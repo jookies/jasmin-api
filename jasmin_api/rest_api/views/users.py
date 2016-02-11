@@ -206,7 +206,7 @@ class UserViewSet(ViewSet):
             else:
                 return JsonResponse({'uid': uid})
         elif matched_index == 1:
-            raise UnknownError(detail='No use:' +  gid)
+            raise UnknownError(detail='No user:' +  uid)
         else:
             raise JasminError(telnet.match.group(1))
 
