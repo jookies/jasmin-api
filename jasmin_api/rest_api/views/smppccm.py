@@ -2,9 +2,12 @@ from django.conf import settings
 from django.http import JsonResponse
 
 from rest_framework.viewsets import ViewSet
+from rest_framework.parsers import JSONParser
+from rest_framework.decorators import detail_route, parser_classes
 from rest_api.tools import set_ikeys, split_cols
 from rest_api.exceptions import (
-    JasminSyntaxError, ActionFailed, ObjectNotFoundError
+    JasminSyntaxError, JasminError, ActionFailed,
+    ObjectNotFoundError, UnknownError, 
 )
 
 STANDARD_PROMPT = settings.STANDARD_PROMPT
@@ -49,18 +52,14 @@ class SMPPCCMViewSet(ViewSet):
         matched_index = telnet.expect([
             r'.+Successfully(.+)' + STANDARD_PROMPT,
             r'.+Unknown connector: (.+)' + STANDARD_PROMPT,
-            r'.+(.*)' + STANDARD_PROMPT,
+            r'(.*)' + STANDARD_PROMPT,
         ])
         if matched_index == 0:
-            print 'persisting'
             telnet.sendline('persist\n')
             return JsonResponse({'name': cid})
         elif matched_index == 1:
-            print 'not found'
             raise ObjectNotFoundError('Unknown SMPP Connector: %s' % cid)
         else:
-            print 'other failure'
-            print telnet.match.group(0)
             raise ActionFailed(telnet.match.group(1))
 
     def list(self, request):
@@ -148,3 +147,87 @@ class SMPPCCMViewSet(ViewSet):
         - 400: other error
         """
         return self.simple_smppccm_action(request.telnet, 'r', cid)
+
+    @parser_classes((JSONParser,))
+    def partial_update(self, request, cid):
+        """Update some SMPP connector attributes
+
+        JSON requests only. The updates parameter is a key value array
+        ---
+        # YAML
+        omit_serializer: true
+        parameters:
+        - name: updates
+          description: Items to update
+          required: true
+          type: array
+          paramType: body
+        """
+        telnet = request.telnet
+        telnet.sendline('smppccm -u ' + cid)
+        matched_index = telnet.expect([
+            r'.*Updating connector(.*)' + INTERACTIVE_PROMPT,
+            r'.*Unknown connector: (.*)' + STANDARD_PROMPT,
+            r'.+(.*)(' + INTERACTIVE_PROMPT + '|' + STANDARD_PROMPT + ')',
+        ])
+        if matched_index == 1:
+            raise UnknownError(detail='Unknown user:' + uid)
+        if matched_index != 0:
+            raise JasminError(detail=" ".join(telnet.match.group(0).split()))
+        updates = request.data
+        for k, v in updates.items():
+            if not ((type(updates) is dict) and (len(updates) >= 1)):
+                raise JasminSyntaxError('updates should be a a key value array')
+            telnet.sendline("%s %s" % (k, v))
+            matched_index = telnet.expect([
+                r'.*(Unknown SMPPClientConfig key:.*)' + INTERACTIVE_PROMPT,
+                r'.*(Error:.*)' + STANDARD_PROMPT,
+                r'.*' + INTERACTIVE_PROMPT,
+                r'.+(.*)(' + INTERACTIVE_PROMPT + '|' + STANDARD_PROMPT + ')',
+            ])
+            if matched_index != 2:
+                raise JasminSyntaxError(
+                    detail=" ".join(telnet.match.group(1).split()))
+        telnet.sendline('ok')
+        ok_index = telnet.expect([
+            r'.*(Error:.*)' + STANDARD_PROMPT,
+            r'(.*)' + INTERACTIVE_PROMPT,
+            r'.*' + STANDARD_PROMPT,
+        ])
+        if ok_index == 0:
+            raise JasminSyntaxError(
+                detail=" ".join(telnet.match.group(1).split()))
+        telnet.sendline('persist\n')
+        #Not sure why this needs to be repeated, just as with user
+        telnet.expect(r'.*' + STANDARD_PROMPT)
+        telnet.expect(r'.*' + STANDARD_PROMPT)
+        return JsonResponse(
+            {'connector': self.get_smppccm(telnet, cid, silent=False)})
+
+    @detail_route(methods=['put'])
+    def start(self, request, cid):
+        """Start SMPP Connector
+
+        One parameter required, the connector identifier
+
+        HTTP codes indicate result as follows
+
+        - 200: successful start
+        - 404: nonexistent connector
+        - 400: other error - this includes failure to start because it is started.
+        """
+        return self.simple_smppccm_action(request.telnet, '1', cid)
+
+    @detail_route(methods=['put'])
+    def stop(self, request, cid):
+        """Start SMPP Connector
+
+        One parameter required, the connector identifier
+
+        HTTP codes indicate result as follows
+
+        - 200: successful start
+        - 404: nonexistent connector
+        - 400: other error - this includes failure to stop because it is stopped.
+        """
+        return self.simple_smppccm_action(request.telnet, '0', cid)

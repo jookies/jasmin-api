@@ -95,7 +95,7 @@ class MORouterViewSet(ViewSet):
             'type': rtype, 'order': order, 
         }
         if rtype.lower() != 'defaultroute':
-            raise NotImplementedError('Only default root works for now')
+            raise NotImplementedError('Only default route works for now')
         set_ikeys(telnet, ikeys)
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
