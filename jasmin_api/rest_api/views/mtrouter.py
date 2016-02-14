@@ -15,51 +15,50 @@ from rest_api.exceptions import (JasminSyntaxError, JasminError,
 STANDARD_PROMPT = settings.STANDARD_PROMPT
 INTERACTIVE_PROMPT = settings.INTERACTIVE_PROMPT
 
-
-class MORouterViewSet(ViewSet):
-    "Viewset for managing MO Routes"
+class MTRouterViewSet(ViewSet):
+    "Viewset for managing MT Routes"
     lookup_field = 'order'
 
     def _list(self, telnet):
-        "List MO router as python dict"
-        telnet.sendline('morouter -l')
+        "List MT router as python dict"
+        telnet.sendline('mtrouter -l')
         telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
         result = telnet.match.group(0).strip().replace("\r", '').split("\n")
         if len(result) < 3:
-            return {'morouters': []}
+            return {'mtrouters': []}
         results = [l.replace(', ', ',').replace('(!)', '')
             for l in result[2:-2] if l]
         routers = split_cols(results)
-        print routers
         return {
-            'morouters':
+            'mtrouters':
                 [
                     {
                         'order': r[0].strip().lstrip('#'),
                         'type': r[1],
-                        'connectors': [c.strip() for c in r[2].split(',')],
-                        'filters': [c.strip() for c in ' '.join(r[3:]).split(',')
+                        'rate': r[2],
+                        'connectors': [c.strip() for c in r[3].split(',')],
+                        'filters': [c.strip() for c in ' '.join(r[4:]).split(',')
                             ] if len(r) > 3 else []
                     } for r in routers
                 ]
         }
 
     def list(self, request):
-        "List MO routers. No parameters"
+        "List MT Routers. No parameters"
         return JsonResponse(self._list(request.telnet))
 
     def get_router(self, telnet, order):
-        "Return data for one morouter as Python dict"
-        morouters = self._list(telnet)['morouters']
+        "Return data for one mtrouter as Python dict"
+        routers = self._list(telnet)['mtrouters']
         try:
-            return {'morouter':
-                next((m for m in morouters if m['order'] == order), None)
+            return {'mtrouter':
+                next((m for m in routers if m['order'] == order), None)
             }
         except StopIteration:
-            raise ObjectNotFoundError('No MoROuter with order: %s' % order)
+            raise ObjectNotFoundError('No MTRouter with order: %s' % order)
 
     def retrieve(self, request, order):
-        "Details for one MORouter by order (integer)"
+        "Details for one MTRouter by order (integer)"
         return JsonResponse(self.get_router(request.telnet, order))
 
 
@@ -67,22 +66,22 @@ class MORouterViewSet(ViewSet):
     def flush(self, request):
         "Flush entire routing table"
         telnet = request.telnet
-        telnet.sendline('morouter -f')
+        telnet.sendline('mtrouter -f')
         telnet.expect([r'(.+)\n' + STANDARD_PROMPT])
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
-        return JsonResponse({'morouters': []})
+        return JsonResponse({'mtrouters': []})
 
     def create(self, request):
-        """Create MORouter.
+        """Create MTRouter.
         Required parameters: type, order, smppconnectors, httpconnectors
-        More than one connector is allowed only for RandomRoundrobinMORoute
+        More than one connector is allowed only for RandomRoundrobinMTRoute
         ---
         # YAML
         omit_serializer: true
         parameters:
         - name: type
-          description: One of DefaultRoute, StaticMORoute, RandomRoundrobinMORoute
+          description: One of DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute
           required: true
           type: string
           paramType: form
@@ -90,6 +89,11 @@ class MORouterViewSet(ViewSet):
           description: Router order, also used to identify router
           required: true
           type: string
+          paramType: form
+        - name: rate
+          description: Router rate, may be zero for free
+          required: true
+          type: float
           paramType: form
         - name: smppconnectors
           description: List of SMPP connector ids.
@@ -110,13 +114,13 @@ class MORouterViewSet(ViewSet):
         telnet = request.telnet
         data = request.data
         try:
-            rtype, order = data['type'], data['order']
+            rtype, order, rate = data['type'], data['order'], data['rate']
         except IndexError:
             raise MissingKeyError(
                 'Missing parameter: type or order required')
         rtype = rtype.lower()
-        telnet.sendline('morouter -a')
-        telnet.expect(r'Adding a new MO Route(.+)\n' + INTERACTIVE_PROMPT)
+        telnet.sendline('mtrouter -a')
+        telnet.expect(r'Adding a new MT Route(.+)\n' + INTERACTIVE_PROMPT)
         ikeys = OrderedDict({'type': rtype})
         if rtype != 'defaultroute':
             try:
@@ -127,10 +131,10 @@ class MORouterViewSet(ViewSet):
             ikeys['order'] = order
         smppconnectors = data.get('smppconnectors', '')
         httpconnectors = data.get('httpconnectors', '')
-        connectors = ['smpps(%s)' % c.strip()
+        connectors = ['smppc(%s)' % c.strip()
                 for c in smppconnectors.split(',') if c.strip()
             ] + ['http(%s)' % c for c in httpconnectors.split(',') if c.strip()]
-        if rtype == 'randomroundrobinmoroute':
+        if rtype == 'randomroundrobinmtroute':
             if len(connectors) < 2:
                 raise MutipleValuesRequiredKeyError(
                     'Round Robin route requires at least two connectors')
@@ -139,8 +143,10 @@ class MORouterViewSet(ViewSet):
             if len(connectors) != 1:
                 raise MissingKeyError('one and only one connector required')
             ikeys['connector'] = connectors[0]
+        ikeys['rate'] = rate
+        print ikeys
         set_ikeys(telnet, ikeys)
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
         telnet.expect(r'.*' + STANDARD_PROMPT)
-        return JsonResponse({'morouter': self.get_router(telnet, order)})
+        return JsonResponse({'mtrouter': self.get_router(telnet, order)})

@@ -4,13 +4,14 @@ from django.conf import settings
 from rest_framework.routers import DefaultRouter
 
 from rest_api.views import (
-    GroupViewSet, UserViewSet, MORouterViewSet, SMPPCCMViewSet
+    GroupViewSet, UserViewSet, MORouterViewSet, SMPPCCMViewSet, MTRouterViewSet
 )
 
 router = DefaultRouter()
 router.register(r'groups', GroupViewSet, base_name='groups')
 router.register(r'users', UserViewSet, base_name='users')
 router.register(r'morouters', MORouterViewSet, base_name='morouters')
+router.register(r'mtrouters', MTRouterViewSet, base_name='mtrouters')
 router.register(r'smppsconns', SMPPCCMViewSet, base_name='smppcons')
 
 
