@@ -122,7 +122,7 @@ class SMPPCCMViewSet(ViewSet):
         telnet = request.telnet
         telnet.sendline('smppccm -a')
         telnet.sendline('cid ' + request.data['cid'] + '\n')
-        telnet.expect(INTERACTIVE_PROMPT)
+        telnet.expect(r'.+' + INTERACTIVE_PROMPT)
         telnet.sendline('ok\n')
         matched_index = telnet.expect([
             r'.+Successfully added(.+)\[(.+)\][\n\r]+' + STANDARD_PROMPT,
@@ -134,7 +134,7 @@ class SMPPCCMViewSet(ViewSet):
             telnet.sendline('persist\n')
             return JsonResponse({'cid': cid})
         else:
-            raise ActionFailed(telnet.match.group(1))
+            raise ActionFailed(telnet.match.group(0))
 
     def destroy(self, request, cid):
         """Delete an smpp connector.
