@@ -13,7 +13,7 @@ TELNET_HOST = '127.0.0.1'
 TELNET_PORT = 8990
 TELNET_USERNAME = 'jcliadmin'
 TELNET_PW = 'jclipwd'  # no alternative storing as plain text
-TELNET_TIMEOUT = 5  # reasonable value for intranet.
+TELNET_TIMEOUT = 10  # reasonable value for intranet.
 
 
 REST_FRAMEWORK = {

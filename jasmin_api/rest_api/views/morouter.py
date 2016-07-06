@@ -125,6 +125,7 @@ class MORouterViewSet(ViewSet):
                 raise MissingKeyError('%s router requires filters' % rtype)
             ikeys['filters'] = ';'.join(filters)
             ikeys['order'] = order
+            print(ikeys)
         smppconnectors = data.get('smppconnectors', '')
         httpconnectors = data.get('httpconnectors', '')
         connectors = ['smpps(%s)' % c.strip()
@@ -141,6 +142,5 @@ class MORouterViewSet(ViewSet):
             ikeys['connector'] = connectors[0]
         set_ikeys(telnet, ikeys)
         telnet.sendline('persist\n')
-        telnet.expect(r'.*' + STANDARD_PROMPT)
         telnet.expect(r'.*' + STANDARD_PROMPT)
         return JsonResponse({'morouter': self.get_router(telnet, order)})
