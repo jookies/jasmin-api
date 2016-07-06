@@ -126,7 +126,6 @@ class UserViewSet(ViewSet):
         )
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
-        telnet.expect(r'.*' + STANDARD_PROMPT)
         return JsonResponse({'user': self.get_user(telnet, uid)})
 
     @parser_classes((JSONParser,))
@@ -187,7 +186,6 @@ class UserViewSet(ViewSet):
         telnet.sendline('persist\n')
         #Not sure why this needs to be repeated
         telnet.expect(r'.*' + STANDARD_PROMPT)
-        telnet.expect(r'.*' + STANDARD_PROMPT)
         return JsonResponse({'user': self.get_user(telnet, uid)})
 
     def simple_user_action(self, telnet, action, uid, return_user=True):
@@ -200,7 +198,6 @@ class UserViewSet(ViewSet):
         if matched_index == 0:
             telnet.sendline('persist\n')
             if return_user:
-                telnet.expect(r'.*' + STANDARD_PROMPT)
                 telnet.expect(r'.*' + STANDARD_PROMPT)
                 return JsonResponse({'user': self.get_user(telnet, uid)})
             else:

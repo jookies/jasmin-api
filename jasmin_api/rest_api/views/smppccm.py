@@ -120,21 +120,26 @@ class SMPPCCMViewSet(ViewSet):
           paramType: form
         """
         telnet = request.telnet
+
         telnet.sendline('smppccm -a')
-        telnet.sendline('cid ' + request.data['cid'] + '\n')
-        telnet.expect(r'.+' + INTERACTIVE_PROMPT)
-        telnet.sendline('ok\n')
-        matched_index = telnet.expect([
-            r'.+Successfully added(.+)\[(.+)\][\n\r]+' + STANDARD_PROMPT,
-            r'.+(Failed .+)[\n\r]+' + INTERACTIVE_PROMPT + '(.*)',
-            r'.+(.*)(' + INTERACTIVE_PROMPT + '|' + STANDARD_PROMPT + ')',
-        ])
-        if matched_index == 0:
-            cid = telnet.match.group(2).strip()
-            telnet.sendline('persist\n')
-            return JsonResponse({'cid': cid})
-        else:
-            raise ActionFailed(telnet.match.group(0))
+        updates = request.data
+        for k, v in updates.items():
+            if not ((type(updates) is dict) and (len(updates) >= 1)):
+                raise JasminSyntaxError('updates should be a a key value array')
+            telnet.sendline("%s %s" % (k, v))
+            matched_index = telnet.expect([
+                r'.*(Unknown SMPPClientConfig key:.*)' + INTERACTIVE_PROMPT,
+                r'.*(Error:.*)' + STANDARD_PROMPT,
+                r'.*' + INTERACTIVE_PROMPT,
+                r'.+(.*)(' + INTERACTIVE_PROMPT + '|' + STANDARD_PROMPT + ')',
+            ])
+            if matched_index != 2:
+                raise JasminSyntaxError(
+                    detail=" ".join(telnet.match.group(1).split()))
+        telnet.sendline('ok')
+        telnet.sendline('persist\n')
+        telnet.expect(r'.*' + STANDARD_PROMPT)
+        return JsonResponse({'cid': request.data['cid']})
 
     def destroy(self, request, cid):
         """Delete an smpp connector.
@@ -200,7 +205,7 @@ class SMPPCCMViewSet(ViewSet):
         telnet.sendline('persist\n')
         #Not sure why this needs to be repeated, just as with user
         telnet.expect(r'.*' + STANDARD_PROMPT)
-        telnet.expect(r'.*' + STANDARD_PROMPT)
+
         return JsonResponse(
             {'connector': self.get_smppccm(telnet, cid, silent=False)})
 

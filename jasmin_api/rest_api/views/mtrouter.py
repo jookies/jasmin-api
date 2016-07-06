@@ -148,5 +148,4 @@ class MTRouterViewSet(ViewSet):
         set_ikeys(telnet, ikeys)
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
-        telnet.expect(r'.*' + STANDARD_PROMPT)
         return JsonResponse({'mtrouter': self.get_router(telnet, order)})

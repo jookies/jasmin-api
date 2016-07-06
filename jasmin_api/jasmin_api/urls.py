@@ -4,7 +4,7 @@ from django.conf import settings
 from rest_framework.routers import DefaultRouter
 
 from rest_api.views import (
-    GroupViewSet, UserViewSet, MORouterViewSet, SMPPCCMViewSet, MTRouterViewSet
+    GroupViewSet, UserViewSet, MORouterViewSet, SMPPCCMViewSet, HTTPCCMViewSet, MTRouterViewSet, FiltersViewSet
 )
 
 router = DefaultRouter()
@@ -13,7 +13,8 @@ router.register(r'users', UserViewSet, base_name='users')
 router.register(r'morouters', MORouterViewSet, base_name='morouters')
 router.register(r'mtrouters', MTRouterViewSet, base_name='mtrouters')
 router.register(r'smppsconns', SMPPCCMViewSet, base_name='smppcons')
-
+router.register(r'httpsconns', HTTPCCMViewSet, base_name='httpcons')
+router.register(r'filters', FiltersViewSet, base_name='filters')
 
 urlpatterns = [
     url(r'^api/', include(router.urls)),
