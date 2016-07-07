@@ -144,3 +144,34 @@ class MORouterViewSet(ViewSet):
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
         return JsonResponse({'morouter': self.get_router(telnet, order)})
+
+    def simple_morouter_action(self, telnet, action, order, return_moroute=True):
+        telnet.sendline('morouter -%s %s' % (action, order))
+        matched_index = telnet.expect([
+            r'.+Successfully(.+)' + STANDARD_PROMPT,
+            r'.+Unknown MO Route: (.+)' + STANDARD_PROMPT,
+            r'.+(.*)' + STANDARD_PROMPT,
+        ])
+        if matched_index == 0:
+            telnet.sendline('persist\n')
+            if return_moroute:
+                telnet.expect(r'.*' + STANDARD_PROMPT)
+                return JsonResponse({'morouter': self.get_router(telnet, fid)})
+            else:
+                return JsonResponse({'order': order})
+        elif matched_index == 1:
+            raise UnknownError(detail='No router:' +  order)
+        else:
+            raise JasminError(telnet.match.group(1))
+
+    def destroy(self, request, order):
+        """Delete a morouter. One parameter required, the router identifier (a string)
+
+        HTTP codes indicate result as follows
+
+        - 200: successful deletion
+        - 404: nonexistent router
+        - 400: other error
+        """
+        return self.simple_morouter_action(
+            request.telnet, 'r', order, return_moroute=False)
