@@ -123,3 +123,34 @@ class FiltersViewSet(ViewSet):
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
         return JsonResponse({'filter': self.get_filter(telnet, fid)})
+
+    def simple_filter_action(self, telnet, action, fid, return_filter=True):
+        telnet.sendline('filter -%s %s' % (action, fid))
+        matched_index = telnet.expect([
+            r'.+Successfully(.+)' + STANDARD_PROMPT,
+            r'.+Unknown Filter: (.+)' + STANDARD_PROMPT,
+            r'.+(.*)' + STANDARD_PROMPT,
+        ])
+        if matched_index == 0:
+            telnet.sendline('persist\n')
+            if return_filter:
+                telnet.expect(r'.*' + STANDARD_PROMPT)
+                return JsonResponse({'filter': self.get_filter(telnet, fid)})
+            else:
+                return JsonResponse({'fid': fid})
+        elif matched_index == 1:
+            raise UnknownError(detail='No filter:' +  fid)
+        else:
+            raise JasminError(telnet.match.group(1))
+
+    def destroy(self, request, fid):
+        """Delete a filter. One parameter required, the filter identifier (a string)
+
+        HTTP codes indicate result as follows
+
+        - 200: successful deletion
+        - 404: nonexistent filter
+        - 400: other error
+        """
+        return self.simple_filter_action(
+            request.telnet, 'r', fid, return_filter=False)
