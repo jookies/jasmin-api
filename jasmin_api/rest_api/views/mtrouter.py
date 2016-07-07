@@ -149,3 +149,34 @@ class MTRouterViewSet(ViewSet):
         telnet.sendline('persist\n')
         telnet.expect(r'.*' + STANDARD_PROMPT)
         return JsonResponse({'mtrouter': self.get_router(telnet, order)})
+
+    def simple_mtrouter_action(self, telnet, action, order, return_mtroute=True):
+        telnet.sendline('mtrouter -%s %s' % (action, order))
+        matched_index = telnet.expect([
+            r'.+Successfully(.+)' + STANDARD_PROMPT,
+            r'.+Unknown MT Route: (.+)' + STANDARD_PROMPT,
+            r'.+(.*)' + STANDARD_PROMPT,
+        ])
+        if matched_index == 0:
+            telnet.sendline('persist\n')
+            if return_mtroute:
+                telnet.expect(r'.*' + STANDARD_PROMPT)
+                return JsonResponse({'mtrouter': self.get_router(telnet, fid)})
+            else:
+                return JsonResponse({'order': order})
+        elif matched_index == 1:
+            raise UnknownError(detail='No router:' +  order)
+        else:
+            raise JasminError(telnet.match.group(1))
+
+    def destroy(self, request, order):
+        """Delete a mtrouter. One parameter required, the router identifier (a string)
+
+        HTTP codes indicate result as follows
+
+        - 200: successful deletion
+        - 404: nonexistent router
+        - 400: other error
+        """
+        return self.simple_mtrouter_action(
+            request.telnet, 'r', order, return_mtroute=False)
