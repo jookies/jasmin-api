@@ -176,7 +176,7 @@ class SMPPCCMViewSet(ViewSet):
             r'.+(.*)(' + INTERACTIVE_PROMPT + '|' + STANDARD_PROMPT + ')',
         ])
         if matched_index == 1:
-            raise UnknownError(detail='Unknown user:' + uid)
+            raise UnknownError(detail='Unknown connector:' + cid)
         if matched_index != 0:
             raise JasminError(detail=" ".join(telnet.match.group(0).split()))
         updates = request.data
